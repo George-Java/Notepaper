@@ -16,3 +16,9 @@ export interface SaveNoteRequest {
   title: string;
   content: string;
 }
+
+export interface ExternalFile {
+  id: string;
+  title: string;
+  filePath: string;
+}

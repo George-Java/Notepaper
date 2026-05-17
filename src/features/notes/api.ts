@@ -21,6 +21,14 @@ export function deleteNote(id: string): Promise<void> {
   return invoke("notes_delete", { id });
 }
 
+export function readExternalFile(path: string): Promise<string> {
+  return invoke("read_external_file", { path });
+}
+
+export function saveExternalFile(path: string, content: string): Promise<void> {
+  return invoke("save_external_file", { path, content });
+}
+
 export function getErrorMessage(error: unknown): string {
   if (typeof error === "string") return error;
   if (error && typeof error === "object" && "message" in error) {

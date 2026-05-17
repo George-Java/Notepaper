@@ -19,9 +19,11 @@ import {
   getErrorMessage,
   getNote,
   listNotes,
+  readExternalFile,
+  saveExternalFile,
   updateNote,
 } from "../features/notes/api";
-import type { Note, NoteMetadata } from "../features/notes/types";
+import type { ExternalFile, Note, NoteMetadata } from "../features/notes/types";
 import {
   countNoteChars,
   filterNotes,
@@ -224,6 +226,7 @@ export function MainWindow({
   initialConfig = undefined,
 }: MainWindowProps = {}) {
   const [notes, setNotes] = useState<NoteMetadata[]>([]);
+  const [externalFiles, setExternalFiles] = useState<ExternalFile[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -254,6 +257,13 @@ export function MainWindow({
     () => notes.find((note) => note.id === selectedId) ?? null,
     [notes, selectedId],
   );
+
+  const selectedExternalFile = useMemo(
+    () => externalFiles.find((f) => f.id === selectedId) ?? null,
+    [externalFiles, selectedId],
+  );
+
+  const isExternal = selectedExternalFile !== null;
 
   const noteMenuTarget = useMemo(
     () => notes.find((note) => note.id === noteMenu?.noteId) ?? null,
@@ -317,6 +327,37 @@ export function MainWindow({
     setSaveState("idle");
   }, []);
 
+  const loadExternalFile = useCallback(async (filePath: string) => {
+    setErrorMessage(null);
+    try {
+      const fileContent = await readExternalFile(filePath);
+      const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+      const displayTitle = fileName.replace(/\.md$/i, "");
+
+      setExternalFiles((current) => {
+        if (current.some((f) => f.id === filePath)) {
+          return current;
+        }
+        return [
+          ...current,
+          {
+            id: filePath,
+            title: displayTitle,
+            filePath,
+          },
+        ];
+      });
+
+      setSelectedId(filePath);
+      setTitle(displayTitle);
+      setContent(fileContent);
+      setSaveState("saved");
+      setNoteTransitionKey((k) => k + 1);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -367,6 +408,15 @@ export function MainWindow({
   }, [refreshNotes, selectedId, loadNote, clearCurrentNote]);
 
   useEffect(() => {
+    const unlisten = listen<string>("open-external-file", (event) => {
+      void loadExternalFile(event.payload);
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, [loadExternalFile]);
+
+  useEffect(() => {
     function closeNoteMenu() {
       setNoteMenuClosing(true);
     }
@@ -395,6 +445,20 @@ export function MainWindow({
   const saveCurrentNote = useCallback(async () => {
     if (!selectedId) return null;
 
+    if (isExternal && selectedExternalFile) {
+      setSaveState("saving");
+      try {
+        await saveExternalFile(selectedExternalFile.filePath, content);
+        setSaveState("saved");
+        setErrorMessage(null);
+        return { id: selectedId, title, content } as Note;
+      } catch (error) {
+        setSaveState("error");
+        setErrorMessage(getErrorMessage(error));
+        return null;
+      }
+    }
+
     setSaveState("saving");
     try {
       const note = await updateNote(selectedId, { title, content });
@@ -407,7 +471,7 @@ export function MainWindow({
       setErrorMessage(getErrorMessage(error));
       return null;
     }
-  }, [content, replaceNoteMetadata, selectedId, title]);
+  }, [content, isExternal, replaceNoteMetadata, selectedExternalFile, selectedId, title]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -423,6 +487,7 @@ export function MainWindow({
 
   useEffect(() => {
     if (!selectedId || saveState !== "dirty") return undefined;
+    if (isExternal) return undefined;
     if (!settingsConfig?.noteAutoSave) return undefined;
 
     const timer = window.setTimeout(() => {
@@ -430,7 +495,7 @@ export function MainWindow({
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [saveCurrentNote, saveState, selectedId, settingsConfig?.noteAutoSave]);
+  }, [isExternal, saveCurrentNote, saveState, selectedId, settingsConfig?.noteAutoSave]);
 
   const handleNewNote = async () => {
     setErrorMessage(null);
@@ -556,6 +621,48 @@ export function MainWindow({
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSelectExternalFile = async (id: string) => {
+    if (id === selectedId) return;
+    setDeleteConfirm(false);
+    if (saveState === "dirty") {
+      await saveCurrentNote();
+    }
+
+    const file = externalFiles.find((f) => f.id === id);
+    if (!file) return;
+
+    setIsLoading(true);
+    try {
+      const fileContent = await readExternalFile(file.filePath);
+      setSelectedId(id);
+      setTitle(file.title);
+      setContent(fileContent);
+      setSaveState("saved");
+      setErrorMessage(null);
+      setNoteTransitionKey((k) => k + 1);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveExternalFile = async (id: string) => {
+    if (selectedId === id && saveState === "dirty") {
+      const shouldSave = window.confirm(
+        `「${title || "未命名文件"}」有未保存的更改，是否保存到原文件？`,
+      );
+      if (shouldSave) {
+        const saved = await saveCurrentNote();
+        if (!saved) return;
+      }
+    }
+    setExternalFiles((current) => current.filter((f) => f.id !== id));
+    if (selectedId === id) {
+      clearCurrentNote();
     }
   };
 
@@ -892,12 +999,80 @@ export function MainWindow({
 
             <div className="px-5 pb-1.5 shrink-0">
               <span className="text-[10px] text-ink-ghost font-mono tracking-wider uppercase">
-                {filteredNotes.length} 篇笔记
+                {filteredNotes.length} 篇笔记{externalFiles.length > 0 ? ` · ${externalFiles.length} 个外部文件` : ""}
               </span>
             </div>
 
             <div className="flex-1 overflow-y-auto px-2 pb-2">
               <div className="space-y-0.5">
+                {externalFiles.length > 0 && (
+                  <>
+                    <div className="px-3 py-1.5 text-[10px] text-ink-ghost/50 font-mono tracking-wider uppercase">
+                      外部文件
+                    </div>
+                    {externalFiles.map((file) => {
+                      const isSelected = file.id === selectedId;
+                      const isHovered = file.id === hoveredId;
+
+                      return (
+                        <button
+                          key={file.id}
+                          onClick={() => void handleSelectExternalFile(file.id)}
+                          onMouseEnter={() => setHoveredId(file.id)}
+                          onMouseLeave={() => setHoveredId(null)}
+                          className={`w-full text-left rounded-xl px-3 py-2.5 transition-all duration-[600ms] cursor-pointer group relative ${
+                            isSelected
+                              ? "bg-bamboo-mist/70"
+                              : isHovered
+                                ? "bg-paper-warm/70"
+                                : "bg-transparent"
+                          }`}
+                        >
+                          <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full bg-bamboo/60 transition-all duration-[600ms] ${
+                            isSelected ? "h-5 opacity-100" : "h-0 opacity-0"
+                          }`} />
+
+                          <div className="flex items-baseline justify-between mb-0.5">
+                            <span
+                              className={`text-[13px] font-display font-medium truncate pr-2 transition-colors flex items-center gap-1.5 ${
+                                isSelected ? "text-bamboo" : "text-ink-soft"
+                              }`}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-60">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                              {file.title}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveExternalFile(file.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 text-ink-ghost hover:text-red-400 transition-all p-0.5"
+                              title="从列表移除"
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <p className="text-[11px] text-ink-ghost leading-relaxed line-clamp-2 group-hover:text-ink-faint transition-colors pl-[18px]">
+                            {file.filePath}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+
+                {filteredNotes.length > 0 && (
+                  <div className="px-3 py-1.5 text-[10px] text-ink-ghost/50 font-mono tracking-wider uppercase">
+                    笔记
+                  </div>
+                )}
                 {filteredNotes.map((note) => {
                   const isSelected = note.id === selectedId;
                   const isHovered = note.id === hoveredId;
@@ -951,7 +1126,7 @@ export function MainWindow({
                   );
                 })}
 
-                {!isLoading && filteredNotes.length === 0 && (
+                {!isLoading && filteredNotes.length === 0 && externalFiles.length === 0 && (
                   <div className="px-3 py-8 text-center text-[12px] text-ink-ghost leading-relaxed">
                     {searchQuery ? "没有匹配的笔记" : "还没有笔记"}
                   </div>
@@ -1124,8 +1299,12 @@ export function MainWindow({
                 className="w-full text-[20px] font-display font-bold text-ink placeholder:text-ink-ghost/50 tracking-wide disabled:opacity-60"
               />
               <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-[10px] text-ink-ghost font-mono tabular-nums">
-                  {selectedNote ? `${formatShortDate(selectedNote.updatedAt)} ${formatTime(selectedNote.updatedAt)}` : "--"}
+                <span className="text-[10px] text-ink-ghost font-mono tabular-nums truncate max-w-[200px]">
+                  {selectedExternalFile
+                    ? `外部文件 · ${selectedExternalFile.filePath}`
+                    : selectedNote
+                      ? `${formatShortDate(selectedNote.updatedAt)} ${formatTime(selectedNote.updatedAt)}`
+                      : "--"}
                 </span>
                 <span className="text-[10px] text-ink-ghost/40">·</span>
                 <span className="text-[10px] text-ink-ghost font-mono tabular-nums">

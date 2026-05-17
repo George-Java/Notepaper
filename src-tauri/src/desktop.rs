@@ -239,6 +239,13 @@ pub async fn open_tile_window(
     open_tile_window_now(&app, &note_id, bounds)
 }
 
+pub fn extract_file_arg(args: &[String]) -> Option<String> {
+    args.iter().find(|arg| {
+        let lower = arg.to_lowercase();
+        lower.ends_with(".md") || lower.ends_with(".markdown")
+    }).cloned()
+}
+
 pub fn setup_desktop(app: &mut App) -> Result<(), Box<dyn Error>> {
     app.manage(RuntimeState::default());
     app.manage(NotepadPool::default());
@@ -253,6 +260,15 @@ pub fn setup_desktop(app: &mut App) -> Result<(), Box<dyn Error>> {
         if let Err(error) = show_main_window(app.handle()) {
             eprintln!("failed to show main window on startup: {error}");
         }
+    }
+
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(file_path) = extract_file_arg(&args) {
+        let app_handle = app.handle().clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let _ = app_handle.emit("open-external-file", file_path);
+        });
     }
 
     Ok(())
@@ -368,7 +384,7 @@ fn handle_tray_menu_event(app: &AppHandle, id: &str) -> Result<(), Box<dyn Error
     Ok(())
 }
 
-fn show_main_window(app: &AppHandle) -> Result<(), AppError> {
+pub fn show_main_window(app: &AppHandle) -> Result<(), AppError> {
     if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
         window.unminimize()?;
         window.show()?;
