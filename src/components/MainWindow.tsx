@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { emit, listen } from "@tauri-apps/api/event";
+import { emit, listen } from "../electron-adapter";
 import { exportMarkdownNote, importMarkdownNote } from "../features/importExport/api";
 import { MarkdownPreview } from "../features/markdown/MarkdownPreview";
 import {
@@ -12,7 +12,6 @@ import {
   saveConfig,
 } from "../features/settings/api";
 import type { AppConfig, ViewMode } from "../features/settings/types";
-import { normalizeTileColor } from "../features/settings/tileColor";
 import { BackgroundLayer } from "./BackgroundLayer";
 import { SettingsPanel } from "./SettingsPanel";
 import { SlidingButtonGroup } from "./SlidingButtonGroup";
@@ -47,19 +46,13 @@ import {
   getNoteContextMenuItems,
   type NoteContextMenuAction,
 } from "../features/notes/noteContextMenu";
-import { openNotepadWindow, takeStartupFile, toggleTileWindow } from "../features/windows/api";
+import { takeStartupFile } from "../features/windows/api";
 import {
   closeCurrentWindow,
   minimizeCurrentWindow,
   toggleMaximizeCurrentWindow,
   isCurrentWindowMaximized,
-  startCurrentWindowDrag,
 } from "../features/windows/controls";
-import {
-  TILE_WINDOW_CLOSED_EVENT,
-  TILE_WINDOW_UNPINNED_EVENT,
-  syncPinnedTileIds,
-} from "../features/windows/tileWindowEvents";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -262,10 +255,6 @@ export function runEditorUndo(
   return doc.execCommand("undo");
 }
 
-export function pinTileButtonTitle(isPinned: boolean): string {
-  return isPinned ? "取消钉屏" : "钉到屏幕";
-}
-
 interface MainWindowProps {
   initialSettingsOpen?: boolean;
   initialConfig?: AppConfig;
@@ -302,7 +291,6 @@ export function MainWindow({
   const [noteTransitionKey, setNoteTransitionKey] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteExiting, setDeleteExiting] = useState(false);
-  const [pinnedTileIds, setPinnedTileIds] = useState<Set<string>>(new Set());
   const [categories, setCategories] = useState<string[]>([]);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>("");
@@ -644,33 +632,6 @@ export function MainWindow({
   }, [loadNote]);
 
   useEffect(() => {
-    const unlisten = listen<string>("shortcut-register-failed", (event) => {
-      setErrorMessage(event.payload);
-    });
-    return () => {
-      void unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = listen<string>(TILE_WINDOW_CLOSED_EVENT, (event) => {
-      setPinnedTileIds((previous) => syncPinnedTileIds(previous, event.payload, false));
-    });
-    return () => {
-      void unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  useEffect(() => {
-    const unlisten = listen<string>(TILE_WINDOW_UNPINNED_EVENT, (event) => {
-      setPinnedTileIds((previous) => syncPinnedTileIds(previous, event.payload, false));
-    });
-    return () => {
-      void unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  useEffect(() => {
     if (!selectedExternalFile) return;
 
     const interval = window.setInterval(async () => {
@@ -864,7 +825,6 @@ export function MainWindow({
         const normalizedConfig = {
           ...nextConfig,
           defaultViewMode: normalizeViewMode(nextConfig.defaultViewMode),
-          tileColor: normalizeTileColor(nextConfig.tileColor),
         };
         try {
           const savedConfig = await saveConfig(normalizedConfig);
@@ -1140,15 +1100,6 @@ export function MainWindow({
     }
   };
 
-  const handleOpenNotepad = async () => {
-    setErrorMessage(null);
-    try {
-      await openNotepadWindow();
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    }
-  };
-
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -1202,31 +1153,6 @@ export function MainWindow({
     };
   }, [isResizingSplit]);
 
-  const handlePinEntry = async () => {
-    if (!selectedId) return;
-    const isPinned = pinnedTileIds.has(selectedId);
-    if (!isPinned && saveState === "dirty") {
-      await saveCurrentNote();
-    }
-
-    setErrorMessage(null);
-    try {
-      const pinned = await toggleTileWindow(selectedId);
-      setPinnedTileIds((previous) => {
-        return syncPinnedTileIds(previous, selectedId, pinned);
-      });
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    }
-  };
-
-  const selectedTilePinned = selectedId ? pinnedTileIds.has(selectedId) : false;
-
-  const handleTitleBarDrag = (event: MouseEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest("button")) return;
-    void startCurrentWindowDrag().catch(() => undefined);
-  };
-
   const toggleMaximize = () => {
     void toggleMaximizeCurrentWindow().then(() => isCurrentWindowMaximized().then(setIsMaximized));
   };
@@ -1249,12 +1175,11 @@ export function MainWindow({
   };
 
   return (
-    <div className="w-full h-screen flex flex-col">
-      <div className="relative noise-bg bg-cloud overflow-hidden flex flex-col flex-1">
+    <div className="w-full h-screen flex flex-col rounded-lg overflow-hidden">
+      <div className="relative noise-bg bg-cloud overflow-hidden flex flex-col flex-1 rounded-lg">
         <BackgroundLayer config={settingsConfig} />
         <div
-          className="relative z-10 flex items-center justify-between pl-5 pr-0 h-11 bg-paper/55 backdrop-blur-[1px] border-b border-paper-deep/30 shrink-0 select-none cursor-default"
-          onMouseDown={handleTitleBarDrag}
+          className="relative z-10 flex items-center justify-between pl-5 pr-0 h-11 bg-paper/55 backdrop-blur-[1px] border-b border-paper-deep/30 shrink-0 select-none cursor-default app-drag-region"
           onDoubleClick={handleTitleBarDoubleClick}
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -1275,27 +1200,8 @@ export function MainWindow({
               </span>
             )}
             <button
-              onClick={() => void handleOpenNotepad()}
-              className="w-10 h-11 flex items-center justify-center text-ink-ghost hover:text-bamboo hover:bg-bamboo-mist/50 transition-all cursor-pointer"
-              title={t("main.window.quickNotepad", { defaultValue: "快捷便签" })}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 4h16v14H7l-3 3V4z" />
-                <path d="M8 9h8M8 13h5" />
-              </svg>
-            </button>
-            <button
               onClick={() => void handleOpenSettings()}
-              className="w-10 h-11 flex items-center justify-center text-ink-ghost hover:text-ink-faint hover:bg-paper-warm transition-all cursor-pointer"
+              className="w-10 h-11 flex items-center justify-center text-ink-ghost hover:text-ink-faint hover:bg-paper-warm transition-all cursor-pointer app-no-drag"
               title={t("main.window.settings", { defaultValue: "设置" })}
             >
               <svg
@@ -1317,7 +1223,7 @@ export function MainWindow({
 
             <button
               onClick={handleMinimize}
-              className="w-11 h-11 flex items-center justify-center text-ink-ghost hover:text-ink-soft hover:bg-paper-warm transition-all cursor-pointer"
+              className="w-11 h-11 flex items-center justify-center text-ink-ghost hover:text-ink-soft hover:bg-paper-warm transition-all cursor-pointer app-no-drag"
               title={t("main.window.minimize", { defaultValue: "最小化" })}
             >
               <svg width="12" height="12" viewBox="0 0 12 12">
@@ -1326,7 +1232,7 @@ export function MainWindow({
             </button>
             <button
               onClick={handleMaximize}
-              className="w-11 h-11 flex items-center justify-center text-ink-ghost hover:text-ink-soft hover:bg-paper-warm transition-all cursor-pointer"
+              className="w-11 h-11 flex items-center justify-center text-ink-ghost hover:text-ink-soft hover:bg-paper-warm transition-all cursor-pointer app-no-drag"
               title={
                 isMaximized
                   ? t("main.window.restore", { defaultValue: "还原" })
@@ -1360,7 +1266,7 @@ export function MainWindow({
             </button>
             <button
               onClick={handleClose}
-              className="w-11 h-11 flex items-center justify-center text-ink-ghost hover:text-red-500 hover:bg-danger-bg transition-all cursor-pointer"
+              className="w-11 h-11 flex items-center justify-center text-ink-ghost hover:text-red-500 hover:bg-danger-bg transition-all cursor-pointer app-no-drag"
               title={t("main.window.close", { defaultValue: "关闭" })}
             >
               <svg
@@ -1925,34 +1831,6 @@ export function MainWindow({
                   >
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <line x1="9" y1="3" x2="9" y2="21" />
-                  </svg>
-                </button>
-
-                <div className="h-4 w-px bg-paper-deep/30 mx-1" />
-
-                <button
-                  onClick={() => void handlePinEntry()}
-                  disabled={!selectedId}
-                  aria-label={pinTileButtonTitle(selectedTilePinned)}
-                  className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${
-                    selectedTilePinned
-                      ? "text-bamboo bg-bamboo-mist/40 hover:text-red-400 hover:bg-danger-bg"
-                      : "text-ink-ghost hover:text-bamboo hover:bg-bamboo-mist/50"
-                  }`}
-                  title={pinTileButtonTitle(selectedTilePinned)}
-                >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 17v5" />
-                    <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1 1 1 0 0 1 1 1z" />
                   </svg>
                 </button>
 

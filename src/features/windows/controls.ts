@@ -1,72 +1,57 @@
-import { invoke } from "@tauri-apps/api/core";
-import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke, windowAPI } from "../../electron-adapter";
 import type { WindowBounds } from "./api";
 
 export type ResizeDirection = "NorthWest" | "NorthEast" | "SouthWest" | "SouthEast";
 
 export async function showCurrentWindow(): Promise<void> {
-  const window = getCurrentWindow();
-  await window.show();
-  await window.setFocus();
+  await windowAPI.show();
 }
 
 export function hideCurrentWindow(): Promise<void> {
-  return getCurrentWindow().hide();
+  return windowAPI.hide();
 }
 
 export function closeCurrentWindow(): Promise<void> {
-  return getCurrentWindow().close();
+  return windowAPI.close();
 }
 
-export function recycleCurrentNotepad(): Promise<void> {
-  return invoke("recycle_notepad_window", {
-    label: getCurrentWindow().label,
+export async function recycleCurrentNotepad(): Promise<void> {
+  const label = await windowAPI.getCurrentLabel();
+  return invoke("window:recycle-notepad", {
+    label: label ?? "notepad-current",
   });
 }
 
 export function minimizeCurrentWindow(): Promise<void> {
-  return getCurrentWindow().minimize();
+  return windowAPI.minimize();
 }
 
 export function toggleMaximizeCurrentWindow(): Promise<void> {
-  return getCurrentWindow().toggleMaximize();
+  return windowAPI.toggleMaximize();
 }
 
 export function isCurrentWindowMaximized(): Promise<boolean> {
-  return getCurrentWindow().isMaximized();
+  return windowAPI.isMaximized();
 }
 
 export function setCurrentWindowAlwaysOnTop(enabled: boolean): Promise<void> {
-  return getCurrentWindow().setAlwaysOnTop(enabled);
+  return windowAPI.setAlwaysOnTop(enabled);
 }
 
 export function startCurrentWindowDrag(): Promise<void> {
-  return getCurrentWindow().startDragging();
+  return windowAPI.startDrag();
 }
 
 export function startCurrentWindowResize(direction: ResizeDirection = "SouthEast"): Promise<void> {
-  return getCurrentWindow().startResizeDragging(direction);
+  return windowAPI.startResize(direction);
 }
 
 export async function getCurrentWindowBounds(): Promise<WindowBounds> {
-  const window = getCurrentWindow();
-  const [position, size] = await Promise.all([window.outerPosition(), window.innerSize()]);
-
-  return {
-    x: position.x,
-    y: position.y,
-    width: size.width,
-    height: size.height,
-  };
+  return (await windowAPI.getBounds()) ?? { x: 0, y: 0, width: 300, height: 300 };
 }
 
 export async function setCurrentWindowBounds(bounds: WindowBounds): Promise<void> {
-  const window = getCurrentWindow();
-  await Promise.all([
-    window.setPosition(new PhysicalPosition(bounds.x, bounds.y)),
-    window.setSize(new PhysicalSize(bounds.width, bounds.height)),
-  ]);
+  await windowAPI.setBounds(bounds);
 }
 
 export async function animateCurrentWindowBounds(

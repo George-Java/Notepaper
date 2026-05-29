@@ -1,13 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import {
-  checkGlobalShortcut,
-  chooseNotesDirectory,
-  getConfig,
-  normalizeViewMode,
-  saveConfig,
-} from "./api";
+import { chooseNotesDirectory, getConfig, normalizeViewMode, saveConfig } from "./api";
 import type { AppConfig } from "./types";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -31,25 +25,17 @@ describe("settings api", () => {
     const config: AppConfig = {
       locale: "zh-CN",
       notesDir: "D:\\notes",
-      globalShortcut: "Ctrl+Space",
       closeToTray: true,
       autostart: false,
       defaultViewMode: "split",
       noteAutoSave: true,
       noteSurfaceAutoSave: true,
-      tileColor: "#f6f3ec",
-      tileColorMode: "system",
       theme: "light",
       fontSize: 14,
-      surfaceFontSize: 14,
       tabIndentSize: 2,
       externalFileAutoSave: true,
       rememberSurfaceSize: true,
-      tileCtrlClose: true,
-      toggleVisibilityShortcut: "",
-      tileRenderMarkdown: false,
       renderHtmlMarkdown: false,
-      openAtCursor: true,
     };
     mockedInvoke.mockResolvedValue(config);
 
@@ -62,46 +48,23 @@ describe("settings api", () => {
     const config: AppConfig = {
       locale: "zh-CN",
       notesDir: "D:\\notes",
-      globalShortcut: "Alt+Space",
       closeToTray: false,
       autostart: true,
       defaultViewMode: "preview",
       noteAutoSave: false,
       noteSurfaceAutoSave: false,
-      tileColor: "#efe8dc",
-      tileColorMode: "custom",
       theme: "dark",
       fontSize: 16,
-      surfaceFontSize: 16,
       tabIndentSize: 4,
       externalFileAutoSave: true,
       rememberSurfaceSize: true,
-      tileCtrlClose: true,
-      toggleVisibilityShortcut: "",
-      tileRenderMarkdown: false,
       renderHtmlMarkdown: false,
-      openAtCursor: true,
     };
     mockedInvoke.mockResolvedValue(config);
 
     await expect(saveConfig(config)).resolves.toBe(config);
 
     expect(invoke).toHaveBeenCalledWith("config_save", { config });
-  });
-
-  test("checks global shortcut availability through Rust", async () => {
-    const result = {
-      available: false,
-      conflictType: "system",
-      message: "与 macOS 系统快捷键冲突",
-    };
-    mockedInvoke.mockResolvedValue(result);
-
-    await expect(checkGlobalShortcut("Command+Space")).resolves.toBe(result);
-
-    expect(invoke).toHaveBeenCalledWith("global_shortcut_check", {
-      shortcut: "Command+Space",
-    });
   });
 
   test("normalizes supported view modes and falls back to split", () => {

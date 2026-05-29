@@ -1,0 +1,70 @@
+appId: com.floral-notepaper.app
+productName: 花笺
+asar: true
+compression: maximum
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - "dist/**/*"
+  - "dist-electron/**/*"
+  - "electron/tsconfig.json"
+  - "src-tauri/icons/icon.ico"
+  - "src-tauri/icons/icon.png"
+  - "src-tauri/icons/icon.icns"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: src-tauri/icons/icon.ico
+  artifactName: ${productName}-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: true
+  installerIcon: src-tauri/icons/icon.ico
+  uninstallerIcon: src-tauri/icons/icon.ico
+  installerHeaderIcon: src-tauri/icons/icon.ico
+  language: "1033"
+  displayLanguageSelector: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 花笺
+  installerSidebar: null
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: src-tauri/icons/icon.icns
+  category: public.app-category.productivity
+  hardenedRuntime: false
+  minimumSystemVersion: "10.15"
+
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: src-tauri/icons
+  category: Utility
+
+fileAssociations:
+  - ext: md
+    name: Markdown Document
+    description: Markdown document file
+    role: Editor
+  - ext: markdown
+    name: Markdown Document
+    description: Markdown document file
+    role: Editor
+  - ext: txt
+    name: Text Document
+    description: Plain text file
+    role: Editor

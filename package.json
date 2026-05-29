@@ -2,23 +2,28 @@
   "name": "floral-notepaper",
   "version": "1.0.4",
   "private": true,
-  "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:1420 && cross-env ELECTRON_DEV=true electron dist-electron/main.js\"",
+    "build:renderer": "tsc && vite build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build:dist": "npm run build:renderer && npm run build:electron",
+    "build:win": "npm run build:dist && electron-builder --win",
+    "build:mac": "npm run build:dist && electron-builder --mac",
+    "build:linux": "npm run build:dist && electron-builder --linux",
+    "build": "npm run build:dist && electron-builder",
     "test": "vitest run",
     "lint": "oxlint",
     "fmt": "oxfmt",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "@tanstack/react-hotkeys": "^0.10.0",
-    "@tauri-apps/api": "~2.11.0",
-    "@tauri-apps/plugin-dialog": "^2.7.0",
-    "@tauri-apps/plugin-opener": "^2",
     "chroma-js": "^3.2.0",
+    "highlight.js": "^11.11.1",
     "i18next": "^26.2.0",
     "indent-textarea": "^4.0.0",
     "katex": "^0.16.47",
@@ -34,12 +39,15 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
-    "@tauri-apps/cli": "^2",
     "@types/chroma-js": "^3.1.2",
     "@types/katex": "^0.16.8",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.3.1",
+    "electron-builder": "^25.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "oxfmt": "^0.51.0",
@@ -47,10 +55,10 @@
     "tailwindcss": "^4.2.4",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.0",
+    "wait-on": "^8.0.3"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,css,json,yml,yaml,html,md}": "oxfmt",
-    "src-tauri/**/*.rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --"
+    "*.{ts,tsx,js,jsx,css,json,yml,yaml,html,md}": "oxfmt"
   }
 }

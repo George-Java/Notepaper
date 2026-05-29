@@ -1,6 +1,5 @@
 import { t, type TFunction } from "i18next";
-import { invoke } from "@tauri-apps/api/core";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { invoke, openDialog, saveDialog } from "../../electron-adapter";
 import type { Note } from "../notes/types";
 
 const markdownFilters = [{ name: "Markdown", extensions: ["md"] }];
@@ -11,7 +10,7 @@ interface ExportableNote {
 }
 
 export async function importMarkdownNote(category = ""): Promise<Note | null> {
-  const path = await open({
+  const path = await openDialog({
     multiple: false,
     directory: false,
     filters: markdownFilters,
@@ -25,7 +24,7 @@ export async function importMarkdownNote(category = ""): Promise<Note | null> {
 }
 
 export async function exportMarkdownNote(note: ExportableNote): Promise<boolean> {
-  const path = await save({
+  const path = await saveDialog({
     defaultPath: markdownFileName(note.title),
     filters: markdownFilters,
   });

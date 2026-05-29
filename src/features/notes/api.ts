@@ -1,5 +1,5 @@
 import { t, type TFunction } from "i18next";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../electron-adapter";
 import type { Note, NoteMetadata, SaveNoteRequest } from "./types";
 
 interface SerializedAppError {
@@ -110,18 +110,6 @@ function parseAppError(error: unknown): {
   };
 }
 
-function shortcutFieldLabel(field: string | undefined, translate: TFunction): string | null {
-  if (field === "globalShortcut") {
-    return translate("settings.quickNoteShortcut", { defaultValue: "呼出小窗快捷键" });
-  }
-
-  if (field === "toggleVisibilityShortcut") {
-    return translate("settings.visibilityShortcut", { defaultValue: "显示/隐藏窗口快捷键" });
-  }
-
-  return null;
-}
-
 function getLocalizedAppErrorMessage(
   appError: ReturnType<typeof parseAppError>,
   translate: TFunction,
@@ -157,22 +145,6 @@ function getLocalizedAppErrorMessage(
       });
     case "noteNotFound":
       return translate("errors.noteNotFound", { defaultValue: "找不到该笔记" });
-    case "duplicateShortcut":
-      return translate("errors.duplicateShortcut", {
-        defaultValue: "显示/隐藏窗口快捷键不能与呼出小窗快捷键重复",
-      });
-    case "unsupportedShortcut": {
-      const fieldLabel = shortcutFieldLabel(appError.details.field, translate);
-      if (!fieldLabel) {
-        return translate("errors.unsupportedShortcutGeneric", {
-          defaultValue: "快捷键配置无效",
-        });
-      }
-      return translate("errors.unsupportedShortcut", {
-        field: fieldLabel,
-        defaultValue: "{{field}} 配置无效",
-      });
-    }
     case "desktopConfig":
       return translate("errors.desktopConfig", { defaultValue: "桌面配置更新失败" });
     case "noPool":

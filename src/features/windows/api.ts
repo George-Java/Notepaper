@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../../electron-adapter";
 
 export interface WindowBounds {
   x: number;
@@ -12,14 +12,6 @@ export function openNotepadWindow(noteId?: string, bounds?: WindowBounds): Promi
     noteId: noteId ?? null,
     bounds: bounds ?? null,
   });
-}
-
-export function openTileWindow(noteId: string, bounds?: WindowBounds): Promise<string> {
-  return invoke("open_tile_window", { noteId, bounds: bounds ?? null });
-}
-
-export function toggleTileWindow(noteId: string, bounds?: WindowBounds): Promise<boolean> {
-  return invoke("toggle_tile_window", { noteId, bounds: bounds ?? null });
 }
 
 export function openNoteInEditor(noteId: string): Promise<void> {

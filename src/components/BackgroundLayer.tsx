@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc } from "../electron-adapter";
 import { useMemo } from "react";
 import type { AppConfig } from "../features/settings/types";
 
