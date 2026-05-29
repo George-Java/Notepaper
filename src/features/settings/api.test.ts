@@ -1,28 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { invoke, openDialog } from "../../electron-adapter";
 import { chooseNotesDirectory, getConfig, normalizeViewMode, saveConfig } from "./api";
-import type { AppConfig } from "./types";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
-
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: vi.fn(),
-}));
-
-const mockedInvoke = vi.mocked(invoke);
-const mockedOpen = vi.mocked(open);
+vi.mock("../../electron-adapter");
 
 describe("settings api", () => {
   beforeEach(() => {
-    mockedInvoke.mockReset();
-    mockedOpen.mockReset();
+    vi.clearAllMocks();
   });
 
-  test("gets config through Rust", async () => {
-    const config: AppConfig = {
+  test("gets config", async () => {
+    const config = {
       locale: "zh-CN",
       notesDir: "D:\\notes",
       closeToTray: true,
@@ -37,15 +25,15 @@ describe("settings api", () => {
       rememberSurfaceSize: true,
       renderHtmlMarkdown: false,
     };
-    mockedInvoke.mockResolvedValue(config);
+    vi.mocked(invoke).mockResolvedValue(config);
 
-    await expect(getConfig()).resolves.toBe(config);
+    await expect(getConfig()).resolves.toEqual(config);
 
     expect(invoke).toHaveBeenCalledWith("config_get");
   });
 
-  test("saves config through Rust", async () => {
-    const config: AppConfig = {
+  test("saves config", async () => {
+    const config = {
       locale: "zh-CN",
       notesDir: "D:\\notes",
       closeToTray: false,
@@ -60,9 +48,9 @@ describe("settings api", () => {
       rememberSurfaceSize: true,
       renderHtmlMarkdown: false,
     };
-    mockedInvoke.mockResolvedValue(config);
+    vi.mocked(invoke).mockResolvedValue(config);
 
-    await expect(saveConfig(config)).resolves.toBe(config);
+    await expect(saveConfig(config)).resolves.toEqual(config);
 
     expect(invoke).toHaveBeenCalledWith("config_save", { config });
   });
@@ -75,18 +63,18 @@ describe("settings api", () => {
   });
 
   test("chooses a notes directory through the folder picker", async () => {
-    mockedOpen.mockResolvedValue("D:\\notes");
+    vi.mocked(openDialog).mockResolvedValue("D:\\notes");
 
     await expect(chooseNotesDirectory()).resolves.toBe("D:\\notes");
 
-    expect(open).toHaveBeenCalledWith({
+    expect(openDialog).toHaveBeenCalledWith({
       directory: true,
       multiple: false,
     });
   });
 
   test("returns null when choosing a notes directory is cancelled", async () => {
-    mockedOpen.mockResolvedValue(null);
+    vi.mocked(openDialog).mockResolvedValue(null);
 
     await expect(chooseNotesDirectory()).resolves.toBeNull();
   });

@@ -1,10 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
 import { describe, expect, test, vi } from "vitest";
+import { invoke } from "../../electron-adapter";
 import { openNotepadWindow, type WindowBounds } from "./api";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
+vi.mock("../../electron-adapter");
 
 describe("window api", () => {
   test("passes optional bounds when opening notepad windows", async () => {

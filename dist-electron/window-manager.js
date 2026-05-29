@@ -102,9 +102,9 @@ function getCurrentLocale() {
 }
 function getIconPath() {
   const iconMap = {
-    win32: path.join(__dirname, "..", "src-tauri", "icons", "icon.ico"),
-    darwin: path.join(__dirname, "..", "src-tauri", "icons", "icon.icns"),
-    linux: path.join(__dirname, "..", "src-tauri", "icons", "icon.png"),
+    win32: path.join(__dirname, "..", "build", "icon.ico"),
+    darwin: path.join(__dirname, "..", "build", "icon.icns"),
+    linux: path.join(__dirname, "..", "build", "icon.png"),
   };
   return iconMap[process.platform] ?? iconMap.linux;
 }

@@ -31,7 +31,7 @@ function setConfig(config: ReturnType<typeof getConfig>) {
 }
 
 function getIconPath(): string {
-  return path.join(__dirname, "..", "src-tauri", "icons", "icon.png");
+  return path.join(__dirname, "..", "build", "icon.png");
 }
 
 function buildTrayMenu(): Menu {

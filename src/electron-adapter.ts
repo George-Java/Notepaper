@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-const api = window.electronAPI;
+const api = typeof window !== "undefined" ? window.electronAPI : undefined;
 
 export function invoke<T = unknown>(command: string, args?: Record<string, unknown>): Promise<T> {
   if (api) {

@@ -11,25 +11,25 @@ files:
   - "dist/**/*"
   - "dist-electron/**/*"
   - "electron/tsconfig.json"
-  - "src-tauri/icons/icon.ico"
-  - "src-tauri/icons/icon.png"
-  - "src-tauri/icons/icon.icns"
+  - "build/icon.ico"
+  - "build/icon.png"
+  - "build/icon.icns"
 
 win:
   target:
     - target: nsis
       arch:
         - x64
-  icon: src-tauri/icons/icon.ico
+  icon: build/icon.ico
   artifactName: ${productName}-Setup-${version}.${ext}
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: true
-  installerIcon: src-tauri/icons/icon.ico
-  uninstallerIcon: src-tauri/icons/icon.ico
-  installerHeaderIcon: src-tauri/icons/icon.ico
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
   language: "1033"
   displayLanguageSelector: false
   createDesktopShortcut: true
@@ -43,7 +43,7 @@ mac:
       arch:
         - x64
         - arm64
-  icon: src-tauri/icons/icon.icns
+  icon: build/icon.icns
   category: public.app-category.productivity
   hardenedRuntime: false
   minimumSystemVersion: "10.15"
@@ -52,7 +52,7 @@ linux:
   target:
     - AppImage
     - deb
-  icon: src-tauri/icons
+  icon: build
   category: Utility
 
 fileAssociations:

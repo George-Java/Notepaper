@@ -75,7 +75,7 @@ function setConfig(config) {
   notes_store_1.NoteStore.defaultStore().saveConfigRaw(config);
 }
 function getIconPath() {
-  return path.join(__dirname, "..", "src-tauri", "icons", "icon.png");
+  return path.join(__dirname, "..", "build", "icon.png");
 }
 function buildTrayMenu() {
   const locale = getLocale();

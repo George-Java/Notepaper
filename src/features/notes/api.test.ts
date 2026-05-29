@@ -13,16 +13,6 @@ describe("notes api error localization", () => {
     ).toBe("分类「工作」已存在");
   });
 
-  test("localizes shortcut configuration errors with settings labels", () => {
-    expect(
-      getErrorMessage({
-        code: "unsupportedShortcut",
-        message: "unsupported globalShortcut shortcut config: Ctrl+",
-        details: { field: "globalShortcut" },
-      }),
-    ).toBe("快捷记录快捷键 配置无效");
-  });
-
   test("parses serialized backend error strings when a structured payload is unavailable", () => {
     expect(getErrorMessage("noteNotFound: Note note-1 was not found")).toBe("找不到该笔记");
   });

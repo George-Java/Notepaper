@@ -1,25 +1,15 @@
-简体中文 | [繁體中文](README_zh-HK.md) | [English](README_en-US.md)
-
 <!-- markdownlint-disable -->
 
 <div align="center">
 
-<img src="./src-tauri/icons/icon.png" width="120" alt="花笺图标">
+<img src="./build/icon.png" width="120" alt="花笺图标">
 
 # 花笺 Floral Notepaper
 
 轻量、优雅、现代化的本地便签工具<br>
-基于 Tauri 2 + React 构建
+基于 Electron + React 构建
 
-[反馈问题](https://github.com/Achilng/floral-notepaper/issues) · [更新日志](https://github.com/Achilng/floral-notepaper/releases)
-
-[![Version](https://img.shields.io/github/v/release/Achilng/floral-notepaper)](https://github.com/Achilng/floral-notepaper/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Stars](https://img.shields.io/github/stars/Achilng/floral-notepaper?color=ffcb47&labelColor=black)</br>
-![React 19](https://img.shields.io/badge/React-19-blue?logo=react)
-![Tauri v2](https://img.shields.io/badge/Tauri-v2-%2324C8D8?logo=tauri)
-![Rust Edition 2021](https://img.shields.io/badge/Rust-2021-%23000000?logo=rust)<br>
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Achilng/floral-notepaper)
+原项目仓库：[Achilng/floral-notepaper](https://github.com/Achilng/floral-notepaper)
 
 </div>
 
@@ -35,15 +25,11 @@
 
 - **Markdown 编辑与预览** — 支持 GitHub Flavored Markdown 语法，实时切换编辑和预览模式
 
-  ![主窗口截图](Docs/images/主窗口截图.png)
+  ![主窗口截图](docs/images/主窗口截图.png)
 
-- **快捷便签** — 通过托盘或全局快捷键（默认 `Ctrl+Space`）随时唤出便签窗口
+- **快捷便签** — 通过托盘随时唤出便签窗口，支持多开
 
-  ![小窗多开示例](Docs/images/小窗多开示例.gif)
-
-- **磁贴模式** — 将笔记固定在桌面某处，以便快速查阅和复制
-
-  ![磁贴示例](Docs/images/AI绘画截图.png)
+  ![小窗多开示例](docs/images/小窗多开示例.gif)
 
 - **导入导出** — 支持 `.md` 文件的导入和导出
 
@@ -63,8 +49,6 @@
 ### 环境要求
 
 - [Node.js](https://nodejs.org/) 18+
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Tauri CLI 2](https://tauri.app/)
 
 ### 步骤
 
@@ -75,21 +59,59 @@ cd floral-notepaper
 npm install
 
 # 开发模式
-npm run tauri dev
+npm run dev:electron
 
-# 构建发布版本
-npm run tauri build
+# 构建 Windows 版本
+npm run build:win
+
+# 构建 macOS 版本
+npm run build:mac
+
+# 构建 Linux 版本
+npm run build:linux
 ```
 
-构建产物输出到 `src-tauri/target/release/bundle/`。
+构建产物输出到 `release/`。
 
-## Star History
+### 项目结构
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Achilng/floral-notepaper&type=Date&legend=top-left)](https://star-history.com/#Achilng/floral-notepaper&Date)
+```
+Notepaper/
+├── electron/            # Electron 主进程
+│   ├── main.ts          # 应用入口
+│   ├── preload.ts       # 预加载脚本
+│   ├── window-manager.ts # 窗口管理
+│   ├── notes-store.ts   # 笔记存储
+│   ├── tray-manager.ts  # 托盘管理
+│   └── locales.ts       # 多语言（主进程）
+├── src/                 # React 渲染进程
+│   ├── components/      # UI 组件
+│   ├── features/        # 功能模块
+│   │   ├── importExport/ # 导入导出
+│   │   ├── markdown/     # Markdown 渲染
+│   │   ├── notes/        # 笔记管理
+│   │   ├── settings/     # 设置
+│   │   └── windows/      # 窗口操作
+│   ├── locales/         # 多语言（渲染进程）
+│   ├── types/           # TypeScript 类型声明
+│   ├── assets/          # 静态资源（字体等）
+│   ├── App.tsx          # React 根组件
+│   ├── main.tsx         # React 入口
+│   └── electron-adapter.ts # Electron API 封装
+├── build/               # 构建资源（图标等）
+├── docs/                # 文档截图
+├── electron-builder.yml # Electron Builder 配置
+├── vite.config.ts       # Vite 构建配置
+└── package.json
+```
 
-## 🌟 贡献者
+## 关于本项目
 
-[![contrib.rocks](https://contrib.rocks/image?repo=Achilng/floral-notepaper&max=1000)](https://contrib.rocks/image?repo=Achilng/floral-notepaper&max=1000)
+本项目基于 [Achilng/floral-notepaper](https://github.com/Achilng/floral-notepaper) 进行二次开发。原项目使用 Tauri 2 + Rust 构建，本版本将其移植到 Electron 平台。感谢原作者的出色设计和开源精神。
+
+## 贡献
+
+欢迎提交 Issue 和 Pull Request。
 
 ## 许可证
 

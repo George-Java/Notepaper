@@ -2,6 +2,7 @@
   "name": "floral-notepaper",
   "version": "1.0.4",
   "private": true,
+  "description": "轻量、优雅、现代化的本地便签工具（Electron + React）",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
